@@ -17,7 +17,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-
 """
 Uploads complete osmChange 0.3 files.  Use your login (not email) as username.
 """
@@ -35,11 +34,20 @@ import http.client as httplib
 import xml.etree.cElementTree as ElementTree
 import urllib.parse as urlparse
 
+
+# monkeypatching for SOCKS5 as described here: https://pypi.org/project/PySocks/
+import socket
+import socks
+print("Adding SOCKS5 proxy")
+socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 9050)
+socket.socket = socks.socksocket
+# end monkeypatching
+
 class HTTPError(Exception):
     pass
 
 class OSM_API(object):
-    url = 'https://api.openstreetmap.org/'
+    url = 'https://api.openstreetmap.org'
     def __init__(self, username = None, password = None):
         if username and password:
             self.username = username
