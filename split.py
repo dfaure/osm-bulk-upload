@@ -22,8 +22,6 @@
 Split large osmChange files.
 """
 
-__version__ = "$Revision: 21 $"
-
 import os
 import sys
 import traceback
@@ -33,7 +31,7 @@ import subprocess
 
 import http
 
-import xml.etree.cElementTree as ElementTree
+import lxml.etree as ElementTree
 
 #locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
 #encoding = locale.getlocale()[1]
@@ -42,14 +40,14 @@ import xml.etree.cElementTree as ElementTree
 
 try:
     this_dir = os.path.dirname(__file__)
-    version = subprocess.Popen(["svnversion", this_dir], stdout = subprocess.PIPE).communicate()[0].strip()
+    version = "1"
     if len(sys.argv) not in (2, 3):
         sys.stderr.write("Synopsis:\n")
-        sys.stderr.write("    %s <file_name> [<num_of_pieces>\n]" % (sys.argv[0],))
+        sys.stderr.write("    %s <file_name> [num_of_pieces>\n]" % (sys.argv[0],))
         sys.exit(1)
 
     filename = sys.argv[1]
-    if len(sys.argv) > 2:
+    if len(sys.argv) == 3:
         num_parts = int(sys.argv[2])
     else:
         num_parts = 2
@@ -67,24 +65,31 @@ try:
             root.attrib.get("version") != "0.6"):
         sys.stderr.write("File %s is not a v0.3 osmChange file!\n" % (filename,))
         sys.exit(1)
-
+#    import pdb; pdb.set_trace()
     element_count = 0
     for operation in root:
         element_count += len(operation)
 
     sys.stderr.write("Number of parts: %r\n" % (element_count,))
     part_size = int((element_count + num_parts - 1) / num_parts)
+    sys.stderr.write("Part size: %d\n" % (part_size))
 
     part = 1
     operation_iter = iter(root)
+
+    # change section
     operation = next(operation_iter)
     elements = list(operation)
-    while elements and operation:
+    if len(elements) == 0: # skip to modify section
+        operation = next(operation_iter)
+        elements = list(operation)
+
+    while elements and (operation is not None):
         filename = "%s-part%i.osc" % (filename_base, part)
         part_root = ElementTree.Element(root.tag, root.attrib)
         part_tree = ElementTree.ElementTree(part_root)
         current_size = 0
-        while operation and current_size < part_size:
+        while (operation is not None) and current_size < part_size:
             part_op = ElementTree.SubElement(part_root, operation.tag, operation.attrib)
             this_part_elements = elements[:(part_size-current_size)]
             elements = elements[(part_size-current_size):]
@@ -99,7 +104,7 @@ try:
                 except StopIteration:
                     operation = None
                     elements = []
-        part_tree.write(filename, "utf-8")
+        part_tree.write(filename)
         part += 1
     comment_fn = filename_base + ".comment"
     if os.path.exists(comment_fn):
