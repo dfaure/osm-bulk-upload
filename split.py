@@ -85,7 +85,7 @@ try:
         elements = list(operation)
 
     while elements and (operation is not None):
-        filename = "%s-part%i.osc" % (filename_base, part)
+        filename = "%s-part%04d.osc" % (filename_base, part)
         part_root = ElementTree.Element(root.tag, root.attrib)
         part_tree = ElementTree.ElementTree(part_root)
         current_size = 0
