@@ -172,6 +172,8 @@ class OSM_API(object):
         reply = self._run_request("PUT", "/api/0.6/changeset/create", body)
         changeset = int(reply.strip())
         self.msg("done.\nChangeset ID: %i" % (changeset))
+        # Want to capture this into a file, so dump to stdout
+        print("Changeset %d" % (changeset))
         sys.stderr.write("\n")
         self.changeset = changeset
 
@@ -271,6 +273,8 @@ try:
 
     changes = []
     for filename in filenames:
+        # Want to capture this into a file, so dump to stdout
+        print("File: %s" % filename)
         if not os.path.exists(filename):
             sys.stderr.write("File %r doesn't exist!\n" % (filename,))
             sys.exit(1)
