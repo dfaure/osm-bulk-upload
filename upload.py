@@ -315,8 +315,12 @@ try:
             #except TypeError:
             #    comment = comment.decode("UTF-8")
 
+        created_by = param.get("created_by", "JOSM/1.5 (13367 en)")
+        source = param.get("source", "survey")
+
         sys.stderr.write("     File: %r\n" % (filename,))
         sys.stderr.write("  Comment: %s\n" % (comment,))
+        sys.stderr.write("created_by and source: %s %s\n" % (created_by, source))
 
         if 'confirm' in param:
             sure = param['confirm']
@@ -327,8 +331,6 @@ try:
             sys.stderr.write("Skipping...\n\n")
             continue
         sys.stderr.write("\n")
-        created_by = param.get("created_by", "JOSM/1.5 (13367 en)")
-        source = param.get("source", "survey")
         if 'changeset' in param:
             api.changeset = int(param['changeset'])
         else:
