@@ -29,6 +29,7 @@ import sys
 import traceback
 import base64
 import codecs
+import random
 
 import http.client as httplib
 import xml.etree.cElementTree as ElementTree
@@ -157,6 +158,26 @@ class OSM_API(object):
             conn.close()
         return response_body
 
+    def add_changeset_tags(self, root, created_by, comment, source):
+        element = ElementTree.SubElement(root, "changeset")
+        ElementTree.SubElement(element, "tag", {"k": "created_by", "v": created_by})
+        ElementTree.SubElement(element, "tag", {"k": "comment", "v": comment})
+
+        if created_by.find("iD") == 0:
+            # Use iD-specific tags
+            ElementTree.SubElement(element, "tag", {"k": "imagery_used",
+                                                    "v": source})
+            ElementTree.SubElement(element, "tag", {"k": "host",
+                                    "v": "https://www.openstreetmap.org/edit"})
+            ElementTree.SubElement(element, "tag", {"k": "locale", "v": "en"})
+            # TODO ideally changeset count should be extracted from user's
+            # settings
+            count = random.randint(10, 100)
+            ElementTree.SubElement(element, "tag", {"k": "changesets_count",
+                                                    "v": str(count)})
+        else:
+            ElementTree.SubElement(element, "tag", {"k": "source", "v": source})
+
     def create_changeset(self, created_by, comment, source):
         if self.changeset is not None:
             raise RuntimeError("Changeset already opened")
@@ -164,10 +185,7 @@ class OSM_API(object):
         self.msg("")
         root = ElementTree.Element("osm")
         tree = ElementTree.ElementTree(root)
-        element = ElementTree.SubElement(root, "changeset")
-        ElementTree.SubElement(element, "tag", {"k": "created_by", "v": created_by})
-        ElementTree.SubElement(element, "tag", {"k": "comment", "v": comment})
-        ElementTree.SubElement(element, "tag", {"k": "source", "v": source})
+        self.add_changeset_tags(root, created_by, comment, source)
         body = ElementTree.tostring(root, "utf-8")
         reply = self._run_request("PUT", "/api/0.6/changeset/create", body)
         changeset = int(reply.strip())
