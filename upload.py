@@ -30,6 +30,7 @@ import traceback
 import base64
 import codecs
 import random
+import re
 
 import http.client as httplib
 import xml.etree.cElementTree as ElementTree
@@ -43,6 +44,36 @@ print("Adding SOCKS5 proxy")
 socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 9050)
 socket.socket = socks.socksocket
 # end monkeypatching
+
+def get_changeset_count(login):
+    # Let's parse HTML with regexps ¯\_(ツ)_/¯!
+#    import pdb; pdb.set_trace()
+    args = [
+        "curl",
+        "--basic",
+        "--silent", # no progress bar
+        "--proxy", "socks5://127.0.0.1:9050/",
+#        "-H", "Content-Type: application/x-www-form-urlencoded",
+        "--fail",
+        "https://www.openstreetmap.org/user/%s" % login
+        ]
+    try:
+        p = subprocess.run(args, timeout = 10, stdout = subprocess.PIPE)
+        retcode = p.returncode
+    except subprocess.TimeoutExpired:
+        print("Got timeout for changeset count", flush=True)
+        retcode = -1
+    if retcode == 0:
+        stdout = p.stdout.decode("utf-8")
+        # Looks for first match <span class='count-number'>9</span>
+        m = re.search(r"<span\s+class='count-number'>\s*(\d+)\s*</span>", stdout)
+        if m:
+            return int(m.group(1)) + 1
+        else:
+            return 0
+    else:
+        return 0
+
 
 class HTTPError(Exception):
     pass
@@ -158,7 +189,7 @@ class OSM_API(object):
             conn.close()
         return response_body
 
-    def add_changeset_tags(self, root, created_by, comment, source):
+    def add_changeset_tags(self, root, created_by, comment, source, cs_count = 0):
         element = ElementTree.SubElement(root, "changeset")
         ElementTree.SubElement(element, "tag", {"k": "created_by", "v": created_by})
         ElementTree.SubElement(element, "tag", {"k": "comment", "v": comment})
@@ -170,22 +201,22 @@ class OSM_API(object):
             ElementTree.SubElement(element, "tag", {"k": "host",
                                     "v": "https://www.openstreetmap.org/edit"})
             ElementTree.SubElement(element, "tag", {"k": "locale", "v": "en"})
-            # TODO ideally changeset count should be extracted from user's
-            # settings
-            count = random.randint(10, 100)
+            # Changeset count should be extracted from user's settings
+            if cs_count == 0:
+                cs_count = random.randint(10, 100)
             ElementTree.SubElement(element, "tag", {"k": "changesets_count",
-                                                    "v": str(count)})
+                                                    "v": str(cs_count)})
         else:
             ElementTree.SubElement(element, "tag", {"k": "source", "v": source})
 
-    def create_changeset(self, created_by, comment, source):
+    def create_changeset(self, created_by, comment, source, cs_count = 0):
         if self.changeset is not None:
             raise RuntimeError("Changeset already opened")
         self.progress_msg = "I'm creating the changeset"
         self.msg("")
         root = ElementTree.Element("osm")
         tree = ElementTree.ElementTree(root)
-        self.add_changeset_tags(root, created_by, comment, source)
+        self.add_changeset_tags(root, created_by, comment, source, cs_count)
         body = ElementTree.tostring(root, "utf-8")
         reply = self._run_request("PUT", "/api/0.6/changeset/create", body)
         changeset = int(reply.strip())
@@ -289,6 +320,8 @@ try:
 
     api = OSM_API(login, password)
 
+    cs_count = get_changeset_count(login)
+
     changes = []
     for filename in filenames:
         # Want to capture this into a file, so dump to stdout
@@ -342,7 +375,9 @@ try:
 
         sys.stderr.write("     File: %r\n" % (filename,))
         sys.stderr.write("  Comment: %s\n" % (comment,))
-        sys.stderr.write("created_by and source: %s %s\n" % (created_by, source))
+        sys.stderr.write("created_by, source, cs count: %s %s %d\n" %
+                         (created_by, source, cs_count))
+
 
         if 'confirm' in param:
             sure = param['confirm']
@@ -356,7 +391,7 @@ try:
         if 'changeset' in param:
             api.changeset = int(param['changeset'])
         else:
-            api.create_changeset(created_by, comment, source)
+            api.create_changeset(created_by, comment, source, cs_count)
             if 'start' in param:
                 print(api.changeset)
                 sys.exit(0)
