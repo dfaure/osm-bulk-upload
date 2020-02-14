@@ -189,7 +189,8 @@ class OSM_API(object):
             conn.close()
         return response_body
 
-    def add_changeset_tags(self, root, created_by, comment, source, cs_count = 0):
+    def add_changeset_tags(self, root, created_by, comment, source, cs_count = 0,
+                           hashtags = None):
         element = ElementTree.SubElement(root, "changeset")
         ElementTree.SubElement(element, "tag", {"k": "created_by", "v": created_by})
         ElementTree.SubElement(element, "tag", {"k": "comment", "v": comment})
@@ -200,23 +201,28 @@ class OSM_API(object):
                                                     "v": source})
             ElementTree.SubElement(element, "tag", {"k": "host",
                                     "v": "https://www.openstreetmap.org/edit"})
-            ElementTree.SubElement(element, "tag", {"k": "locale", "v": "en"})
+            ElementTree.SubElement(element, "tag", {"k": "locale", "v": "en-US"})
             # Changeset count should be extracted from user's settings
             if cs_count == 0:
                 cs_count = random.randint(10, 100)
             ElementTree.SubElement(element, "tag", {"k": "changesets_count",
                                                     "v": str(cs_count)})
+            if hashtags is not None:
+                ElementTree.SubElement(element, "tag", {"k": "hashtags",
+                                                        "v": hashtags})
         else:
             ElementTree.SubElement(element, "tag", {"k": "source", "v": source})
 
-    def create_changeset(self, created_by, comment, source, cs_count = 0):
+    def create_changeset(self, created_by, comment, source, cs_count = 0,
+                         hashtags = None):
         if self.changeset is not None:
             raise RuntimeError("Changeset already opened")
         self.progress_msg = "I'm creating the changeset"
         self.msg("")
         root = ElementTree.Element("osm")
         tree = ElementTree.ElementTree(root)
-        self.add_changeset_tags(root, created_by, comment, source, cs_count)
+        self.add_changeset_tags(root, created_by, comment, source, cs_count,
+                                hashtags)
         body = ElementTree.tostring(root, "utf-8")
         reply = self._run_request("PUT", "/api/0.6/changeset/create", body)
         changeset = int(reply.strip())
@@ -302,6 +308,9 @@ try:
         elif arg == "-y":
             param['source'] = sys.argv[num + 1]
             skip = 1
+        elif arg == "-h":
+            param['hashtags'] = param['comment'].replace(" ", ";")
+            skip = 0
         else:
             filenames.append(arg)
 
@@ -378,11 +387,16 @@ try:
         sys.stderr.write("created_by, source, cs count: %s %s %d\n" %
                          (created_by, source, cs_count))
 
+        hashtags = None
+        if 'hashtags' in param:
+            sys.stderr.write("hashtags: %s\n" % (param['hashtags'],))
+            hashtags = param['hashtags']
 
         if 'confirm' in param:
             sure = param['confirm']
         else:
             sys.stderr.write("Are you sure you want to send these changes?")
+            sys.stderr.flush()
             sure = input()
         if sure.lower() not in ("y", "yes"):
             sys.stderr.write("Skipping...\n\n")
@@ -391,7 +405,7 @@ try:
         if 'changeset' in param:
             api.changeset = int(param['changeset'])
         else:
-            api.create_changeset(created_by, comment, source, cs_count)
+            api.create_changeset(created_by, comment, source, cs_count, hashtags)
             if 'start' in param:
                 print(api.changeset)
                 sys.exit(0)
