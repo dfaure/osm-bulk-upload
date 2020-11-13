@@ -96,9 +96,10 @@ class OSM_API(object):
         pass
 
     def msg(self, mesg):
-        sys.stderr.write("\r%s…                        " % (self.progress_msg))
-        sys.stderr.write("\r%s… %s" % (self.progress_msg, mesg))
-        sys.stderr.flush()
+        pass
+        #sys.stderr.write("\r%s…                        " % (self.progress_msg))
+        #sys.stderr.write("\r%s… %s" % (self.progress_msg, mesg))
+        #sys.stderr.flush()
 
     def request(self, conn, method, url, body, headers, progress):
         if progress:
@@ -229,7 +230,7 @@ class OSM_API(object):
         self.msg("done.\nChangeset ID: %i" % (changeset))
         # Want to capture this into a file, so dump to stdout
         print("Changeset %d" % (changeset))
-        sys.stderr.write("\n")
+#        sys.stderr.write("\n")
         self.changeset = changeset
 
     def upload(self, change):
@@ -246,7 +247,7 @@ class OSM_API(object):
         reply = self._run_request("POST", "/api/0.6/changeset/%i/upload"
                                                 % (self.changeset,), body, 1)
         self.msg("done.")
-        sys.stderr.write("\n")
+#        sys.stderr.write("\n")
         return reply
 
     def close_changeset(self):
@@ -258,10 +259,10 @@ class OSM_API(object):
             reply = self._run_request("PUT", "/api/0.6/changeset/%i/close"
                                       % (self.changeset,))
         except socket.gaierror:
-            self.msg("Failed to close; no big deal")
+            print("Failed to close; no big deal", flush=True)
         self.changeset = None
         self.msg("done, too.")
-        sys.stderr.write("\n")
+#        sys.stderr.write("\n")
 
 try:
     this_dir = os.path.dirname(__file__)
@@ -385,8 +386,8 @@ try:
         created_by = param.get("created_by", "JOSM/1.5 (15806 en)")
         source = param.get("source", "survey")
 
-        sys.stderr.write("     File: %r\n" % (filename,))
-        sys.stderr.write("  Comment: %s\n" % (comment,))
+#        sys.stderr.write("File: %r\n" % (filename,))
+        sys.stderr.write("Comment: %s\n" % (comment,))
         sys.stderr.write("created_by, source, cs count: %s %s %d\n" %
                          (created_by, source, cs_count))
 
@@ -402,9 +403,9 @@ try:
             sys.stderr.flush()
             sure = input()
         if sure.lower() not in ("y", "yes"):
-            sys.stderr.write("Skipping...\n\n")
+            sys.stderr.write("Skipping...\n")
             continue
-        sys.stderr.write("\n")
+#        sys.stderr.write("\n")
         if 'changeset' in param:
             api.changeset = int(param['changeset'])
         else:
