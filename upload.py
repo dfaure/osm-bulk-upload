@@ -254,8 +254,11 @@ class OSM_API(object):
             raise RuntimeError("Changeset not opened")
         self.progress_msg = "Closing"
         self.msg("")
-        reply = self._run_request("PUT", "/api/0.6/changeset/%i/close"
-                                                    % (self.changeset,))
+        try:
+            reply = self._run_request("PUT", "/api/0.6/changeset/%i/close"
+                                      % (self.changeset,))
+        except socket.gaierror:
+            self.msg("Failed to close; no big deal")
         self.changeset = None
         self.msg("done, too.")
         sys.stderr.write("\n")
