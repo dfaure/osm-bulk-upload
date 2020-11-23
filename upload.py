@@ -47,13 +47,11 @@ socket.socket = socks.socksocket
 
 def get_changeset_count(login):
     # Let's parse HTML with regexps ¯\_(ツ)_/¯!
-#    import pdb; pdb.set_trace()
     args = [
         "curl",
         "--basic",
         "--silent", # no progress bar
         "--proxy", "socks5://127.0.0.1:9050/",
-#        "-H", "Content-Type: application/x-www-form-urlencoded",
         "--fail",
         "https://www.openstreetmap.org/user/%s" % login
         ]
@@ -275,6 +273,7 @@ try:
         sys.stderr.write("    %s <file-name.osc> [<file-name.osc>...]\n" % (sys.argv[0],))
         sys.exit(1)
 
+    fetch_changeset = False
     filenames = []
     param = {}
     num = 0
@@ -312,6 +311,9 @@ try:
         elif arg == "-y":
             param['source'] = sys.argv[num + 1]
             skip = 1
+        elif arg == "-i":
+            fetch_changeset = True
+            skip = 0
         elif arg == "-h":
             param['hashtags'] = param['comment'].replace(" ", ";")
             skip = 0
@@ -333,7 +335,7 @@ try:
 
     api = OSM_API(login, password)
 
-    cs_count = get_changeset_count(login)
+    cs_count = get_changeset_count(login) if fetch_changeset else 1
 
     changes = []
     for filename in filenames:
@@ -378,12 +380,8 @@ try:
                 comment = input("Your comment to %r: " % (filename,))
             if not comment:
                 sys.exit(1)
-            #try:
-            #    comment = comment.decode(locale.getlocale()[1])
-            #except TypeError:
-            #    comment = comment.decode("UTF-8")
 
-        created_by = param.get("created_by", "JOSM/1.5 (15806 en)")
+        created_by = param.get("created_by", "JOSM/1.5 (17084 en)")
         source = param.get("source", "survey")
 
 #        sys.stderr.write("File: %r\n" % (filename,))
@@ -399,7 +397,7 @@ try:
         if 'confirm' in param:
             sure = param['confirm']
         else:
-            sys.stderr.write("Are you sure you want to send these changes?")
+            sys.stderr.write("Are you sure you want to send these changes?\n")
             sys.stderr.flush()
             sure = input()
         if sure.lower() not in ("y", "yes"):
