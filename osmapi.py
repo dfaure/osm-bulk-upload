@@ -40,7 +40,7 @@ class OSM_API(object):
                 response.status_code, response.url), err)
         return response.text
 
-    def create_changeset(self, created_by, comment, source=None, url=None):
+    def create_changeset(self, created_by, comment, source=None, url=None, isImport=True):
         if self.changeset is not None:
             raise RuntimeError("Changeset already opened")
         self.progress_msg = "I'm creating the changeset"
@@ -49,7 +49,8 @@ class OSM_API(object):
         element = ElementTree.SubElement(root, "changeset")
         if url:
             ElementTree.SubElement(element, "tag", {"k": "url", "v": url})
-        ElementTree.SubElement(element, "tag", {"k": "import", "v": "yes"})
+        if isImport:
+            ElementTree.SubElement(element, "tag", {"k": "import", "v": "yes"})
         ElementTree.SubElement(element, "tag", {"k": "created_by", "v": created_by})
         ElementTree.SubElement(element, "tag", {"k": "comment", "v": comment})
         if source:

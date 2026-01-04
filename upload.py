@@ -77,6 +77,9 @@ try:
         elif arg == "-z":
             param['url'] = sys.argv[num + 1]
             skip = 1
+        elif arg == "-ni":
+            param['not_import'] = 1
+            skip = 0
         else:
             filenames.append(arg)
 
@@ -139,10 +142,11 @@ try:
         created_by = param.get("created_by", "osm-bulk-upload/upload.py v. %s" % (version,))
         source = param.get("source", "survey")
         url = param.get("url", "")
+        isImport = 'not_import' not in param
         if 'changeset' in param:
             api.changeset = int(param['changeset'])
         else:
-            api.create_changeset(created_by, comment, source, url)
+            api.create_changeset(created_by, comment, source, url, isImport)
             if 'start' in param:
                 print(api.changeset)
                 sys.exit(0)
